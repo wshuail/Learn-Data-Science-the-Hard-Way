@@ -183,7 +183,10 @@ class seacher():
         totalscores = dict([(row[0], 0) for row in rows])
 
         # This is where you will later put the scoring function
-        weights = [(1.0, self.frequencyscore(rows))]
+        weights = [(1.0, self.locationscore(rows)),
+                (1.0, self.frequencyscore(rows)),
+                (1.0, self.pagerankscore(rows)),
+                (1.0, self.linktextscore(rows))]
 
         for (weight, scores) in weights:
             for url in totalscores:
@@ -229,6 +232,92 @@ class seacher():
         return self.normalizescores(locations, smallIsBetter = 1)
 
     # weights = [(1.0, self.locationscore(rows))]
+
+    def worddistance(self, rows):
+        # If there's only one word, everyone wins
+        if len(range(rows)) < 2:
+            return dict([(row[0], 1.0) for row in rows])
+
+        # Initialize the dictionary with large value
+        mindistance = dict([(row[0], 1000000) for row in rows])
+
+        for row in rows:
+            dist = sum([abs(row[i] - row[i - 1]) for i in range(2, len(row))])
+            if dist < mindistance[row[0]]:
+                mindistance[row[0]] = dist 
+        return self.normalizescores(mindistance, smallIsBetter = 1)
+
+    def inboundlinkscore(self, rows):
+        uniqueurls = set([row[0] for row in rows])
+        inboundcount = dict([(u, self.con.execute("
+            select count(*) from link where toid = %d
+            " % u).fieldlist()[0]) for u in uniqueurls])
+        return self.normalizescores(inboundcount)
+
+    def calculatepagerank(self, iterations = 20):
+        # clear out the current pagerank tables
+        self.con.execute("drop table if exists pagerank")
+        self.con.execute("create table pagerank(urlid primary key, score)")
+
+        # Initialize every url with a pagerank of 1
+        self.exe.execute("insert into pagerank select rowid, 1.0 from urllist")
+        self.dbcommit()
+
+        for i in range(iterations):
+            print "Iteration %d" % (i)
+            for (urlid, ) in self.con.execute("
+                    select distinct fromid from link where toid = %d
+                    " % urlid)
+
+            # Get the PageRank of the linker
+            linkingpr = self.con.execute("
+                    select score from pagerank where urlid = %d
+                    " % linker).fetchone()[0]
+
+            # Get the total number of link from the linker
+            linkingcount = self.con.execute("
+                    select count(*) from link where urlid = %d
+                    " % linker).fetchone()[0]
+            pr += 0.85 * (linkingpr/linkingcount)
+        self.con.execute("
+                update pagerank set score = %f where urlid = %d
+                " %(pr, urlid))
+    self.dbcommit()
+
+    def def pagerankscore(self, rows):
+        pageranks = dict([(row[0], self.con.execute("
+            select score from pagerank where urlid = %d
+            " % row[0]).fetchone()[0]) for row in rows])
+        maxrank = max(pagerank.values())
+        normalizescores = dict([(u, float(l)/maxrank) for (u, l) in pageraaks.items()])
+        return normalizescores
+
+    def linktextscore(self, rows, wordids):
+        linkscores = dict([(row[0], 0) for row in rows])
+        for wordid in wordids:
+            cur = self.con.execute("
+                    select link.fromid, link.toid from linkwords, link
+                    where wordid = %d and linkwords.linkid = link.rowid
+                    " % wordid)
+            for toid in linkscores:
+                pr = self.con.execute("
+                        select score from pagerank where urlid = %d
+                        " % fromid).fetchone()[0]
+                linkscore[toid] += pr 
+
+        maxscore = max(linkscores.values())
+        normalizescores = dict([(u, float(l)/maxscore) for (u, l) in linkscores.items()])
+        return normalizescores
+
+
+
+
+
+
+
+
+
+
 
 
             
