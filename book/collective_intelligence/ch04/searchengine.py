@@ -221,6 +221,7 @@ class seacher():
         rankedscores = sorted([(score, url) for (url, score) in scores.items()], reverse = 1)
         for (score, urlid) in rankedscores[1: 10]:
             print '%f\t%s' % (score, self.geturlname(urlid))
+        # return wordids, [r[i] for r in rankedscores[0: 10]]
 
     def normalizescores(self, scores, smallIsBetter = 0):
         vsmall = 0.00001 # Avoid division by zero errors

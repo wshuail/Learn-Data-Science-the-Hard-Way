@@ -129,6 +129,64 @@ class searchnet():
         self.setupnetwork(wordids, urlids)
         return self.feedforward()
 
+    def dtanh(y):
+        return 1.0 - y * y
+
+
+ 
+    def backpropagate(self, targets, N = 0.5):
+        # calculate error for output 
+        output_deltas = [0.0] * len(self.urlids)
+        for k in range(len(self.urlids)):
+            error = targets[k] - self.ao[k]
+            output_deltas[k] = dtanh(self.ao[k]) * error
+
+        # calculate error for hidden layer
+        hidden_deltas = [0.0] * len(self.hiddenids)
+        for j in range(len(self.hiddenids)):
+            error = 0.0
+            for k in range(len(self.urlids)):
+                error += output_deltas[k] * self.wo[j][k]
+            hidden_deltas[j] = dtanh(self.ah[j]) * error
+
+        # update output weights
+        for j in range(len(self.hiddenids)):
+            for k in range(len(self.urlids)):
+                change = output_deltas[k] * self.ah[j]
+                self.wo[j][k] = self.wo[j][k] + N * change
+
+        # update hidden weight
+        for i in range(len(self.wordids)):
+            for j in range(len(self.hiddenids)):
+                change = hidden_deltas[j] * self.ai[i]
+                self.wi[i][j] = self.wi[i][j] + N * change
+
+
+    def trainquery(self, wordids, urlids, selecturl):
+        # generate a hidden node if necessary
+        self.generatehiddennode(wordids, urlids)
+
+        self.setupnetwork(wordids, urlids)
+        self.feedforward()
+        targets = [0.0] * len(urlids)
+        targets[urlids.index(selecturl)] = 1.0
+        error = self.backpropagate(targets)
+        self.setupnetwork()
+
+
+    def updatedatabase(self):
+        # set them to database value
+        for i in range(len(self.wordids)):
+            for j in range(len(self.hiddenids)):
+                self.setstrength(self.wordids[i], self.hiddenids[j], 0, self.wi[i][j])
+        for j in range(len(self.hiddenids)):
+            for k in range(len(self.urlids)):
+                self.setstrength(self.hiddenids[j], self.urlids[k], 1, self.wo[j][k])
+        self.con.commit()
+
+
+
+
 
 
             
