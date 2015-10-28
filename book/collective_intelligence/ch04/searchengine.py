@@ -21,11 +21,11 @@ class crawler():
     # Auxilliary function for getting an entry id and adding
     # it if it's not present
     def getentryid(self, table, field, value, createnew = True):
-        cur = self.con.execute("
+        cur = self.con.execute("\
                 select rowid from %s where %s = '%s'" %(table, field, value))
         res = cur.fetchone()
         if res == None:
-            cur = self.con.execute("
+            cur = self.con.execute("\
                     insert into %s (%s) values ('%s')" % (table, field, value))
             return cur.lastrowid
         else:
@@ -49,7 +49,7 @@ class crawler():
             if word in ignorewords:
                 continue
             wordid = self.getentryid('wordlist', 'word', word)
-            self.con.execute("
+            self.con.execute("\
                     insert into wordlocation(urlid, wordid, location)\
                             values (%d, %d, %d)" % (urlid, wordid, i))
 
@@ -73,13 +73,12 @@ class crawler():
 
     # Return True if this url is already indexed
     def isindexed(self, url):
-        u = self.con.execute("
-                select rowid from urllist where url = '%s'
-                " % url).fetchone()
+        print self.con.execute("select * from urllist")
+        u = self.con.execute("select rowid from urllist where url = '%s'" % url).fetchone()
         if u != None:
             # Check if it has been crawled
-            v = self.con.execute("
-                    select * from wordlocation where urlid = %d
+            v = self.con.execute("\
+                    select * from wordlocation where urlid = %d\
                     " % u[0]).fetchone()
             if v != None:
                 return True
@@ -87,7 +86,21 @@ class crawler():
 
     # Add a link between two pages
     def addlinkref(self, urlFrom, urlTo, linkText):
-        pass
+        words = self.separatewords(linkText)
+        fromid = self.getentryid('urllist', 'url', urlFrom)
+        toid = self.getentryid('urllist', 'url', urlTo)
+        if fromid == toid: return
+        cur = self.con.execute("\
+                insert into link(fromid, toid) values (%d, %d)\
+                " %(fromid, toid))
+        linkid = cur.lastrowid
+        for word in words:
+            if word in ignorewords:
+                continue
+            wordid = self.getentryid('wordlist', 'word', word)
+            self.con.execute("\
+                    insert into linkwords(linkid, wordid) values (%d, %d)\
+                    " %(linkid, wordid))
 
     # Starting with a list of pages, do a breadth
     # first search to the given depth, indexing pages as we go
@@ -123,16 +136,16 @@ class crawler():
 
     # Create the database tables
     def createindextables(self):
-        self.con.execute('create table urllist(url)')
-        self.con.execute('create table wordlist(word)')
-        self.con.execute('create table wordlocation(urlid, wordid, location)')
-        self.con.execute('create table link(fromid integer, toid integer)')
-        self.con.execute('create table linkwords(wordid, linkid)')
-        self.con.execute('create index wordidx on wordlist(word)')
-        self.con.execute('create index urlidx on urllist(urlid)')
-        self.con.execute('create index wordurlidx on wordlocation(wordid)')
-        self.con.execute('create index urltoidx on link(urlto)')
-        self.con.execute('create index urlfromidx on link(fromid)')
+        self.con.execute('create table if not exists urllist(url)')
+        self.con.execute('create table if not exists wordlist(word)')
+        self.con.execute('create table if not exists wordlocation(urlid, wordid, location)')
+        self.con.execute('create table if not exists link(fromid integer, toid integer)')
+        self.con.execute('create table if not exists linkwords(wordid, linkid)')
+        self.con.execute('create index if not exists wordidx on wordlist(word)')
+        self.con.execute('create index if not exists urlidx on urllist(url)')
+        self.con.execute('create index if not exists wordurlidx on wordlocation(wordid)')
+        self.con.execute('create index if not exists urltoidx on link(toid)')
+        self.con.execute('create index if not exists urlfromidx on link(fromid)')
         self.dbcommit()
 
 class seacher():
@@ -140,7 +153,10 @@ class seacher():
         self.con = self.connect(dbname)
 
     def __del__(self):
-        self.com.close()
+        self.con.close()
+
+    def dbcommit(self):
+        self.con.commit()
 
     def getmatches(self, q):
         # String to build the query
@@ -155,9 +171,9 @@ class seacher():
 
         for word in words:
             # Get the wordid
-            wordrow = con.execute("
-            select rowid from wordlist where word = '%s'
-            ", %word).fetchone()
+            wordrow = con.execute("\
+            select rowid from wordlist where word = '%s'\
+            " % word).fetchone()
 
             if wordrow != None:
                 wordid = wordrow[0]
@@ -195,8 +211,8 @@ class seacher():
         return totalscores
 
     def geturlname(self, id):
-        return self.con.execute("
-                select url from urllist where rowid = %d
+        return self.con.execute("\
+                select url from urllist where rowid = %d\
                 " % id).fetchone()[0]
 
     def query(self, q):
@@ -249,8 +265,8 @@ class seacher():
 
     def inboundlinkscore(self, rows):
         uniqueurls = set([row[0] for row in rows])
-        inboundcount = dict([(u, self.con.execute("
-            select count(*) from link where toid = %d
+        inboundcount = dict([(u, self.con.execute("\
+            select count(*) from link where toid = %d\
             " % u).fieldlist()[0]) for u in uniqueurls])
         return self.normalizescores(inboundcount)
 
@@ -265,29 +281,22 @@ class seacher():
 
         for i in range(iterations):
             print "Iteration %d" % (i)
-            for (urlid, ) in self.con.execute("
-                    select distinct fromid from link where toid = %d
-                    " % urlid)
+            for (urlid, ) in self.con.execute("select distinct fromid from link where toid = %d" % urlid):
 
-            # Get the PageRank of the linker
-            linkingpr = self.con.execute("
-                    select score from pagerank where urlid = %d
-                    " % linker).fetchone()[0]
+                # Get the PageRank of the linker
+                linkingpr = self.con.execute("select score from pagerank where urlid = %d" % linker).fetchone()[0]
 
-            # Get the total number of link from the linker
-            linkingcount = self.con.execute("
-                    select count(*) from link where urlid = %d
-                    " % linker).fetchone()[0]
-            pr += 0.85 * (linkingpr/linkingcount)
-        self.con.execute("
-                update pagerank set score = %f where urlid = %d
-                " %(pr, urlid))
-    self.dbcommit()
+                # Get the total number of link from the linker
+                linkingcount = self.con.execute("\
+                    select count(*) from link where urlid = %d" % linker).fetchone()[0]
+                pr += 0.85 * (linkingpr/linkingcount)
+        self.con.execute("\
+                update pagerank set score = %f where urlid = %d" %(pr, urlid))
+        self.dbcommit()
 
-    def def pagerankscore(self, rows):
-        pageranks = dict([(row[0], self.con.execute("
-            select score from pagerank where urlid = %d
-            " % row[0]).fetchone()[0]) for row in rows])
+    def pagerankscore(self, rows):
+        pageranks = dict([(row[0], self.con.execute("\
+            select score from pagerank where urlid = %d" % row[0]).fetchone()[0]) for row in rows])
         maxrank = max(pagerank.values())
         normalizescores = dict([(u, float(l)/maxrank) for (u, l) in pageraaks.items()])
         return normalizescores
@@ -295,13 +304,11 @@ class seacher():
     def linktextscore(self, rows, wordids):
         linkscores = dict([(row[0], 0) for row in rows])
         for wordid in wordids:
-            cur = self.con.execute("
-                    select link.fromid, link.toid from linkwords, link
-                    where wordid = %d and linkwords.linkid = link.rowid
-                    " % wordid)
+            cur = self.con.execute("\
+                    select link.fromid, link.toid from linkwords, link where wordid = %d and linkwords.linkid = link.rowid" % wordid)
             for toid in linkscores:
-                pr = self.con.execute("
-                        select score from pagerank where urlid = %d
+                pr = self.con.execute("\
+                        select score from pagerank where urlid = %d\
                         " % fromid).fetchone()[0]
                 linkscore[toid] += pr 
 
@@ -310,16 +317,5 @@ class seacher():
         return normalizescores
 
 
-
-
-
-
-
-
-
-
-
-
-            
 
 
