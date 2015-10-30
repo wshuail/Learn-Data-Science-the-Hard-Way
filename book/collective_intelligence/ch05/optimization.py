@@ -44,8 +44,8 @@ def schedulecost(sol):
     for d in range(len(sol)/2):
         # Get the inbound and outbound flights
         origin = people[d][1]
-        outbound = flights[(origin, destination)][int(sol[d])]
-        returnf = flights[(destination, origin)][int(sol[d + 1])]
+        outbound = flights[(origin, destination)][int(sol[d*2])]
+        returnf = flights[(destination, origin)][int(sol[d*2 + 1])]
 
         # Total price is the price of all outbound and return flights
         totalprice += outbound[2]
@@ -54,16 +54,16 @@ def schedulecost(sol):
         # Track the latest arrival and earliest departure
         if latestarrival < getminutes(outbound[1]):
             latestarrival = getminutes(outbound[1])
-        if earliestdep < getminutes(outbound[0]):
-            earliestdep = getminutes(returnf[1])
+        if earliestdep > getminutes(outbound[0]):
+            earliestdep = getminutes(returnf[0])
 
     # Every Person must wait at the airport until the latest person arrives
     # They also must arrive at the same time and wait for their flights
     totalwait = 0
     for d in range(len(sol)/2):
         origin = people[d][1]
-        outbound = flights[(origin, destination)][int(sol[d])]
-        returnf = flights[(destination, origin)][int(sol[d + 1])]
+        outbound = flights[(origin, destination)][int(sol[d*2])]
+        returnf = flights[(destination, origin)][int(sol[d*2 + 1])]
         totalwait += latestarrival - getminutes(outbound[1])
         totalwait += earliestdep - getminutes(returnf[0]) # - earliestdep
 
@@ -80,7 +80,6 @@ def randomoptimize(domain, costf):
     for i in range(10000):
         # create a random solution
         r = [random.randint(domain[i][0], domain[i][1]) for i in range(len(domain))]
-        print r
 
         # get the cost
         cost = costf(r)
@@ -90,5 +89,70 @@ def randomoptimize(domain, costf):
             best = cost
             bestr = r
     return r
+
+def hillclimb(domain, costf):
+    # create a random solution
+    sol = [random.randint(domain[i][0], domain[i][1]) for i in range(len(domain))]
+    print 'sol: ', sol
+
+    # Main loop
+    while 1:
+        # create list of neighboring solution
+        neighbors = []
+        for j in range(len(domain)):
+
+            # One way in each direction
+            if sol[j] > domain[j][0]:
+                neighbors.append(sol[0: j] + [sol[j] + 1] + sol[j + 1: ])
+            if sol[j] < domain[j][1]:
+                neighbors.append(sol[0: j] + [sol[j] - 1] + sol[j + 1: ])
+
+        # see what the best solution among the neighbors is
+        current = costf(sol)
+        best = current
+        for j in range(len(neighbors)):
+            print neighbors[j]
+            cost = costf(neighbors[j])
+            if cost < best:
+                best = cost
+                sol = neighbors[j]
+
+        # If there's no improvement, then we have reached the top
+        if best == current:
+            break
+
+    return sol
+
+def annealingoptimize(domain, costf, T = 10000.0, cool = 0.95, step = 1):
+    # Initialize the values randomly
+    vec = [float(random.randint(domain[i][0], domain[i][1])) for i in range(len(domain))]
+
+    while T > 0.1:
+        # Choose one of the indices
+        i = random.randint(0, len(domain) - 1)
+
+        # choose a direction to change it
+        dir = random.randint(-step, step)
+
+        # create a new list with one of the values changed
+        vecb = vec[:]
+        vecb[i] += dir
+        if vecb[i] < domain[i][0]:
+            vecb[i] = domain[i][0]
+        elif vecb[i] > domain[i][1]:
+            vecb[i] = domain[i][1]
+
+        # calculate the current cost and the new cost
+        ea = costf(vec)
+        eb = costf(vecb)
+        p = pow(math.e, (-eb-ea)/T)
+
+        # Is this better or does it make the probability cutoff
+        if (eb < ea or random.random() < p):
+            vec = vecb
+
+        # decrease the temperature
+        T = T*cool
+    return vec
 
 
