@@ -86,4 +86,99 @@ def entropy(rows):
         ent = ent - p*log2(p)
     return ent
 
+def buildtree(rows, scoref = entropy):
+    if len(rows) == 0:
+        return decisionnode()
+
+    current_score = scoref(rows)
+
+    # Set up some variable to track the best criteria
+    best_gain = 0.0
+    best_criteria = None
+    best_sets = None
+
+    column_count = len(rows[0]) - 1
+    for col in range(0, column_count):
+        # Generate the different values in that column
+        column_values = {}
+        for row in rows:
+            print 'row: ', row
+            print 'col: ', col
+            column_values[row[col]] = 1
+        # Now try dividing the rows up for each value
+        # in this column
+        for value in column_values.keys():
+            (set1, set2) = divideset(rows, col, value)
+
+            # Information gain
+            p = float(len(set1))/len(rows)
+            gain = current_score - p*scoref(set1) - (1 - p)*scoref(set2)
+
+            if gain > best_gain and len(set1) > 0 and len(set2) > 0:
+                best_gain = gain
+                best_criteria = (col, value)
+                best_sets = (set1, set2)
+
+    # create the subbranches
+    if best_gain > 0:
+        true_branch = buildtree(best_sets[0])
+        false_branch = buildtree(best_sets[1])
+        return decisionnode(col = best_criteria[0], value = best_criteria[1], tb = true_branch, fb = false_branch)
+    else:
+        return decisionnode(results = uniquecounts(rows))
+
+def classify(observation, tree):
+    if tree.result != None:
+        return tree.result
+    else:
+        v = observation[tree.col]
+        branch = None
+        if isinstance(v, int) or isinstance(v, float):
+            if v >= tree.value:
+                branch = tree.tb
+            else:
+                branch = tree.tb
+        else:
+            if v == tree.value:
+                branch = tree.tb
+            else:
+                branch = tree.fb
+    return classify(observation, branch)
+
+def prune(tree, mingain):
+    # If the branches aren't leaves, then prune them
+    if tree.tb.result == None:
+        prune(tree.tb, mingain)
+    else:
+        prune(tree.fb, mingain)
+
+    # If both the subbranches are now leaves, see if they should 
+    # merged
+    if tree.tb.result != None and tree.fb.result != None:
+        # build a combined dataset
+        tb, fb = [], []
+        for v, c in tree.tb.results.items():
+            tb += [[v]]*c
+        for v, c in tree.fb.results.items():
+            fb += [[v]]*c
+
+        # Test the reduction in entropy
+        delta = entropy(tb + fb) - ((entropy(tb) + entropy(fb))/2)
+        if delta < mingain:
+            # Merge the branches
+            tree.tb, tree.fb = None, None
+            tree.results = uniquecounts(tb + fb)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
