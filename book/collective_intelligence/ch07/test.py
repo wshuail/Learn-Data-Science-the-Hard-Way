@@ -18,3 +18,11 @@ print "Gini impurity\n"
 print treepredict.giniimpurity(set1)
 print "treepredict.entropy\n"
 print treepredict.entropy(set1)
+
+print '\n'
+tree = treepredict.buildtree(treepredict.my_data)
+print 'tree: ', tree
+
+print '\n'
+
+print 'classify: ', treepredict.classify(['(direct)', 'USA', 'yes', 5], tree)

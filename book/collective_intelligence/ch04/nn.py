@@ -185,11 +185,3 @@ class searchnet():
         self.con.commit()
 
 
-
-
-
-
-            
-
-
-

@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 import urllib2
+import re
 from bs4 import BeautifulSoup
 from urlparse import urljoin
 from pysqlite2 import dbapi2 as sqlite
@@ -34,7 +35,7 @@ class crawler():
     # Index and individual page
     def addtoindex(self, url, soup):
         if self.isindexed(url): return
-        print 'Indexing %s' % page
+        print 'Indexing %s' % url
 
         # Get the individual words
         text = self.gettextonly(soup)
@@ -59,7 +60,7 @@ class crawler():
         if v == None:
             v = soup.contents
             resulttext = ''
-            for t in c:
+            for t in v:
                 subtext = self.gettextonly(t)
                 resulttext += subtext + '\n'
             return resulttext
@@ -112,9 +113,9 @@ class crawler():
                     c = urllib2.urlopen(page)
                 except:
                     print 'Could not open %s' % page
-                    continue
+                    continue                  
                 soup = BeautifulSoup(c.read())
-                self.addtoindex(page, soup)
+                # self.addtoindex(page, soup)
 
                 links = soup('a')
                 for link in links:
@@ -148,9 +149,9 @@ class crawler():
         self.con.execute('create index if not exists urlfromidx on link(fromid)')
         self.dbcommit()
 
-class seacher():
+class searcher():
     def __init__(self, dbname):
-        self.con = self.connect(dbname)
+        self.con = sqlite.connect(dbname)
 
     def __del__(self):
         self.con.close()
@@ -158,7 +159,7 @@ class seacher():
     def dbcommit(self):
         self.con.commit()
 
-    def getmatches(self, q):
+    def getmatchrows(self, q):
         # String to build the query
         fieldlist = 'w0.urlid'
         tablelist = ''
@@ -171,12 +172,14 @@ class seacher():
 
         for word in words:
             # Get the wordid
-            wordrow = con.execute("\
+            print word
+            wordrow = self.con.execute("\
             select rowid from wordlist where word = '%s'\
             " % word).fetchone()
 
             if wordrow != None:
                 wordid = wordrow[0]
+                print wordrow[0]
                 wordids.append(wordid)
 
                 if tablenumber > 0:
@@ -187,15 +190,19 @@ class seacher():
                 tablelist += 'wordlocation w%d' % tablenumber
                 clauselist += 'w%d.wordid = %d' % (tablenumber, wordid)
                 tablenumber += 1
+                print 'fieldlist: ', fieldlist
+                print 'tablelist: ', tablelist
+                print 'clauselist: ', clauselist
 
         # Create the query from separate parts
         fullquery = 'select %s from %s where %s' % (fieldlist, tablelist, clauselist)
         cur = self.con.execute(fullquery)
+        print 'cur: ', cur
         rows = [row for row in cur]
 
         return rows, wordids
 
-    def getscoredlist(self, row, wordids):
+    def getscoredlist(self, rows, wordids):
         totalscores = dict([(row[0], 0) for row in rows])
 
         # This is where you will later put the scoring function

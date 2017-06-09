@@ -44,8 +44,16 @@ def schedulecost(sol):
     for d in range(len(sol)/2):
         # Get the inbound and outbound flights
         origin = people[d][1]
-        outbound = flights[(origin, destination)][int(sol[d*2])]
-        returnf = flights[(destination, origin)][int(sol[d*2 + 1])]
+        print flights[(origin, destination)]
+        print int(sol[d])
+        print 'd', d
+        print 'sol: ', sol
+        print flights[(origin, destination)][int(sol[d])]
+        outbound = flights[(origin, destination)][int(sol[d])]
+        # print outbound
+        print flights[(destination, origin)]
+        print 'returnf: ', [int(sol[d])]
+        returnf = flights[(destination, origin)][int(sol[d])]
 
         # Total price is the price of all outbound and return flights
         totalprice += outbound[2]
@@ -62,8 +70,8 @@ def schedulecost(sol):
     totalwait = 0
     for d in range(len(sol)/2):
         origin = people[d][1]
-        outbound = flights[(origin, destination)][int(sol[d*2])]
-        returnf = flights[(destination, origin)][int(sol[d*2 + 1])]
+        outbound = flights[(origin, destination)][int(sol[d])]
+        returnf = flights[(destination, origin)][int(sol[d])]
         totalwait += latestarrival - getminutes(outbound[1])
         totalwait += earliestdep - getminutes(returnf[0]) # - earliestdep
 
@@ -155,4 +163,86 @@ def annealingoptimize(domain, costf, T = 10000.0, cool = 0.95, step = 1):
         T = T*cool
     return vec
 
+def geneticoptimize(domain, costf, popsize = 50, step = 1, 
+        mutprod = 0.2, elite = 0.2, maxiter = 100):
+    # Mutation operation
+    def mutate(vec):
+        i = random.randint(0, len(domain) - 1)
+        print 'i value: ', i
+        print 'vec[i]: ', vec[i]
+        print 'domain[i][0]: ', domain[i][0]
+        if random.random() < 0.5 and vec[i] > domain[i][0]:
+            print 'test mutate 1'
+            return vec[0: i] + [vec[i] - step] + vec[i + 1: ]
+        else: # if vec[i] < domain[i][1]:
+            print 'test mutate 2'
+            return vec[0: i] + [vec[i] + step] + vec[i + 1: ]
+
+    # Crossover operation
+    def crossover(r1, r2):
+        i = random.randint(1, len(domain) - 2)
+        return r1[0: i] + r2[i: ]
+
+    # Build the Initial population
+    pop = []
+    for i in range(popsize):
+        vec = [random.randint(domain[i][0], domain[i][1]) for i in range(len(domain))]
+        pop.append(vec)
+
+    # for p in pop:
+        # print p
+        # pscore = [costf(p), p]
+        # print pscore
+        # l = range(len(p)/2)
+        # print l
+
+    # How many winners for each generation
+    topelite = int(elite * popsize)
+
+    # Main loop
+    for i in range(maxiter):
+        # print i, '\n'
+        # print '\n'
+        # print pop
+        # for p in pop:
+        #     s = costf(p)
+        #     print p, s
+        #    print '\n'
+        # print 'test'
+        scores = [(costf(v), v) for v in pop]
+        # print 'get score %d', i , scores 
+        scores.sort()
+        # print 'scores sort: ', scores
+        ranked = [v for (s, v) in scores]
+
+        # start with the pure winner
+        pop = ranked[0: topelite]
+        print 'pop: ', pop
+
+        # Add mutate and bred forms of the winner
+        while len(pop) < popsize:
+            if random.random() < mutprod:
+                # Mutation
+                c = random.randint(0, topelite)
+                print 't1c:', c
+                print 'ranked c: ', ranked[c]
+                print mutate(ranked[c])
+                pop.append(mutate(ranked[c]))
+                print 'pop append 1: ', pop
+            else:
+                #Crossover
+                c1 = random.randint(0, topelite)
+                c2 = random.randint(0, topelite)
+                print 't2c1: ', c1
+                print 'ranked[c1]', ranked[c1]
+                print 'ranked[c2]', ranked[c2]
+                print crossover(ranked[c1], ranked[c2])
+                pop.append(crossover(ranked[c1], ranked[c2]))
+                print 'pop append 2: ', pop
+        print 'ttttttttttt'
+        print pop
+        # print current best score
+        print scores[0][0]
+
+    return scores[0][1]
 
