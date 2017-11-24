@@ -4,9 +4,11 @@
 ### 2. Numpy Tutorial  
 ### 3. Ten Minutes To Pandas
 ### 4: Pandas Cookbook
-  
-<br/>
-##Contents
+### 5: Collective Intelligence
+### 6: Five Types of Probility_Models
+
+       
+## Contents  
 ### 1. Python for Data Analysis  
 
  Chapter 1 Preliminaries    
@@ -24,11 +26,11 @@
 [Appendix: Python Language Essentials](http://nbviewer.jupyter.org/github/wangshuailong/Learn-Data-Science-the-Hard-Way/blob/master/book/Python_for_Data_Analysis/appendix.ipynb)  
 
 
-###2. Numpy Tutorial
+### 2. Numpy Tutorial
 [Numpy Tutorial](http://nbviewer.ipython.org/urls/raw.githubusercontent.com/wangshuailong/Learn-Data-Science-the-Hard-Way/master/NumPy/tutorial/numpy_tutorial/numpy_tutorial.ipynb)  
   
 
-###3. Ten Minutes To Pandas
+### 3. Ten Minutes To Pandas
 [Ten Minutes To Pandas](http://nbviewer.ipython.org/urls/raw.githubusercontent.com/wangshuailong/Learn-Data-Science-the-Hard-Way/master/Pandas/ten_minutes_to_pandas/ten_minutes_to_pandas.ipynb)
 ### 4. Pandas Cookbook
 [Chapter 1: Reading from a CSV](http://nbviewer.ipython.org/urls/raw.githubusercontent.com/wangshuailong/Learn-Data-Science-the-Hard-Way/master/Pandas/pandas_cookbook/ch01.ipynb)  
@@ -40,3 +42,7 @@
 [Chapter 7: Cleaning up messy data ](https://raw.githubusercontent.com/wangshuailong/Learn-Data-Science-the-Hard-Way/master/Pandas/pandas_cookbook/ch07.ipynb)  
 [Chapter 8: Parsing Unix timestamps ](https://raw.githubusercontent.com/wangshuailong/Learn-Data-Science-the-Hard-Way/master/Pandas/pandas_cookbook/ch08.ipynb)  
 [Chapter 9: Loading data from SQL databases ](https://raw.githubusercontent.com/wangshuailong/Learn-Data-Science-the-Hard-Way/master/Pandas/pandas_cookbook/ch09.ipynb)
+
+### 5: [Collective Intelligence](https://github.com/wangshuailong/Learn-Data-Science-the-Hard-Way/tree/master/book/collective_intelligence)
+
+### 6: [Five Types of Probility_Models](https://github.com/wangshuailong/Learn-Data-Science-the-Hard-Way/blob/master/statistic/probility/Five_Types_of_Probility_Models.ipynb)
